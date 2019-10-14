@@ -39,23 +39,27 @@ server.post("/api/register", (req, res) => {
   }
 })
 
-server.post("/api/login", (req, res) => {
-  let { username, password } = req.body
+server.post("/api/login", protected, (req, res) => {})
 
-  Users.findBy({ username })
-    .first()
-    .then(user => {
-      const passwordMatches = bcrypt.compareSync(password, user.password)
+// implement the protected middleware that will check for username and password in the headers and if valid provide access to the endpoint
+async function protected(req, res, next) {
+  let username = req.headers.username
+  let password = req.headers.password
+
+  if (username && password) {
+    try {
+      const user = await Users.findBy({ username })
       if (user && passwordMatches) {
         res.status(200).json({ message: `Welcome ${user.username}!` })
+        next()
       } else {
-        res.status(401).json({ message: "Invalid Credentials" })
+        res.status(400).json({ message: "Invalid Credentials" })
       }
-    })
-    .catch(error => {
-      res.status(500).json({ message: "Could not find user with credentials" })
-    })
-})
+    } catch (error) {}
+  } else {
+    res.status(400).json({ message: "Please provide username and password" })
+  }
+}
 
 server.get("/api/users", (req, res) => {
   Users.find()
