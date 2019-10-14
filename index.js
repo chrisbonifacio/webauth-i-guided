@@ -39,25 +39,32 @@ server.post("/api/register", (req, res) => {
   }
 })
 
-server.post("/api/login", protected, (req, res) => {})
+server.post("/api/login", protected, (req, res) => {
+  res.status(200).json({ message: `Welcome ${req.headers.username}!` })
+})
 
 // implement the protected middleware that will check for username and password in the headers and if valid provide access to the endpoint
-async function protected(req, res, next) {
-  let username = req.headers.username
-  let password = req.headers.password
+function protected(req, res, next) {
+  let { username, password } = req.headers
+
+  console.log(username, password)
 
   if (username && password) {
-    try {
-      const user = await Users.findBy({ username })
-      if (user && passwordMatches) {
-        res.status(200).json({ message: `Welcome ${user.username}!` })
-        next()
-      } else {
-        res.status(400).json({ message: "Invalid Credentials" })
-      }
-    } catch (error) {}
+    Users.findBy({ username })
+      .first()
+      .then(user => {
+        console.log(user)
+        if (user && bcrypt.compareSync(password, user.password)) {
+          next()
+        } else {
+          res.status(400).json({ error: "Invalid Credentials" })
+        }
+      })
+      .catch(err => {
+        res.status(400).json({ error: "Invalid Credentials" })
+      })
   } else {
-    res.status(400).json({ message: "Please provide username and password" })
+    res.status(400).json({ message: "please provide username and password" })
   }
 }
 
