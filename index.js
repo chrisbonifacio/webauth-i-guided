@@ -17,22 +17,26 @@ server.get("/", (req, res) => {
   res.send("It's alive!")
 })
 
-server.post("/api/register", async (req, res) => {
+server.post("/api/register", (req, res) => {
   let user = req.body
 
-  bcrypt.genSalt(10, async function(err, salt) {
-    bcrypt.hash(user.password, salt, async function(err, hash) {
-      await Users.add(userData)
-    })
-  })
+  // validate the user
+  if (user.username && user.password) {
+    // hash the password
+    const hash = bcrypt.hashSync(user.password, 10)
 
-  Users.add(user)
-    .then(saved => {
-      res.status(201).json(saved)
-    })
-    .catch(error => {
-      res.status(500).json(error)
-    })
+    user.password = hash
+
+    Users.add(user)
+      .then(saved => {
+        res.status(201).json(saved)
+      })
+      .catch(error => {
+        res.status(500).json(error)
+      })
+  } else {
+    res.status(400).json({ message: "Please provide a username and password" })
+  }
 })
 
 server.post("/api/login", (req, res) => {
@@ -41,14 +45,15 @@ server.post("/api/login", (req, res) => {
   Users.findBy({ username })
     .first()
     .then(user => {
-      if (user) {
+      const passwordMatches = bcrypt.compareSync(password, user.password)
+      if (user && passwordMatches) {
         res.status(200).json({ message: `Welcome ${user.username}!` })
       } else {
         res.status(401).json({ message: "Invalid Credentials" })
       }
     })
     .catch(error => {
-      res.status(500).json(error)
+      res.status(500).json({ message: "Could not find user with credentials" })
     })
 })
 
@@ -58,6 +63,22 @@ server.get("/api/users", (req, res) => {
       res.json(users)
     })
     .catch(err => res.send(err))
+})
+
+server.get("/hash", (req, res) => {
+  // read a password from the Authorization header
+  const password = req.headers.authorization
+
+  if (password) {
+    const hash = bcrypt.hashSync(password, 10) // the 8 is the number of rounds 2 ^ 8
+
+    // return an object with the password hashed using bcryptjs
+    res.status(200).json({ hash: hash })
+
+    // { hash: '970(&(:OHKJHIY*HJKH(*^)*&YLKJBLKJGHIUGH(*P' }
+  } else {
+    res.status(400).json({ message: "Please provide credentials" })
+  }
 })
 
 const port = process.env.PORT || 5000
