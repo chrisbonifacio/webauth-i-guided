@@ -1,56 +1,64 @@
-const express = require('express');
-const helmet = require('helmet');
-const cors = require('cors');
+const express = require("express")
+const helmet = require("helmet")
+const cors = require("cors")
 
-const db = require('./database/dbConfig.js');
-const Users = require('./users/users-model.js');
+const db = require("./database/dbConfig.js")
+const Users = require("./users/users-model.js")
 
-const server = express();
+const server = express()
 
-server.use(helmet());
-server.use(express.json());
-server.use(cors());
+const bcrypt = require("bcryptjs")
 
-server.get('/', (req, res) => {
-  res.send("It's alive!");
-});
+server.use(helmet())
+server.use(express.json())
+server.use(cors())
 
-server.post('/api/register', (req, res) => {
-  let user = req.body;
+server.get("/", (req, res) => {
+  res.send("It's alive!")
+})
+
+server.post("/api/register", async (req, res) => {
+  let user = req.body
+
+  bcrypt.genSalt(10, async function(err, salt) {
+    bcrypt.hash(user.password, salt, async function(err, hash) {
+      await Users.add(userData)
+    })
+  })
 
   Users.add(user)
     .then(saved => {
-      res.status(201).json(saved);
+      res.status(201).json(saved)
     })
     .catch(error => {
-      res.status(500).json(error);
-    });
-});
+      res.status(500).json(error)
+    })
+})
 
-server.post('/api/login', (req, res) => {
-  let { username, password } = req.body;
+server.post("/api/login", (req, res) => {
+  let { username, password } = req.body
 
   Users.findBy({ username })
     .first()
     .then(user => {
       if (user) {
-        res.status(200).json({ message: `Welcome ${user.username}!` });
+        res.status(200).json({ message: `Welcome ${user.username}!` })
       } else {
-        res.status(401).json({ message: 'Invalid Credentials' });
+        res.status(401).json({ message: "Invalid Credentials" })
       }
     })
     .catch(error => {
-      res.status(500).json(error);
-    });
-});
+      res.status(500).json(error)
+    })
+})
 
-server.get('/api/users', (req, res) => {
+server.get("/api/users", (req, res) => {
   Users.find()
     .then(users => {
-      res.json(users);
+      res.json(users)
     })
-    .catch(err => res.send(err));
-});
+    .catch(err => res.send(err))
+})
 
-const port = process.env.PORT || 5000;
-server.listen(port, () => console.log(`\n** Running on port ${port} **\n`));
+const port = process.env.PORT || 5000
+server.listen(port, () => console.log(`\n** Running on port ${port} **\n`))
